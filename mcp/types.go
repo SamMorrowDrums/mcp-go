@@ -50,6 +50,10 @@ const (
 	// https://modelcontextprotocol.io/specification/2024-11-05/server/tools/
 	MethodToolsCall MCPMethod = "tools/call"
 
+	// MethodComplete asks for completion options.
+	// https://modelcontextprotocol.io/specification/2024-11-05/server/completion/
+	MethodComplete MCPMethod = "completion/complete"
+
 	// MethodSetLogLevel configures the minimum log level for client
 	// https://modelcontextprotocol.io/specification/2025-03-26/server/utilities/logging
 	MethodSetLogLevel MCPMethod = "logging/setLevel"
@@ -468,6 +472,8 @@ type ServerCapabilities struct {
 		// Whether this server supports notifications for changes to the tool list.
 		ListChanged bool `json:"listChanged,omitempty"`
 	} `json:"tools,omitempty"`
+	// Present if the server supports completion.
+	Completion *struct{} `json:"completion,omitempty"`
 }
 
 // Implementation describes the name and version of an MCP implementation.

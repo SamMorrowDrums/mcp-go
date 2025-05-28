@@ -58,6 +58,18 @@ func TestMCPServer_Capabilities(t *testing.T) {
 				WithResourceCapabilities(true, true),
 				WithPromptCapabilities(true),
 				WithToolCapabilities(true),
+				WithCompletion(func(ctx context.Context, request mcp.CompleteRequest) (*mcp.CompleteResult, error) {
+					return &mcp.CompleteResult{
+						Completion: struct {
+							Values  []string `json:"values"`
+							Total   int      `json:"total,omitempty"`
+							HasMore bool     `json:"hasMore,omitempty"`
+						}{
+							Values: []string{"test-completion"},
+							Total:  1,
+						},
+					}, nil
+				}),
 				WithLogging(),
 			},
 			validate: func(t *testing.T, response mcp.JSONRPCMessage) {
@@ -85,6 +97,8 @@ func TestMCPServer_Capabilities(t *testing.T) {
 
 				assert.NotNil(t, initResult.Capabilities.Tools)
 				assert.True(t, initResult.Capabilities.Tools.ListChanged)
+
+				assert.NotNil(t, initResult.Capabilities.Completion)
 
 				assert.NotNil(t, initResult.Capabilities.Logging)
 			},
@@ -2021,4 +2035,99 @@ func TestMCPServer_ProtocolNegotiation(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestMCPServer_CompletionHandling(t *testing.T) {
+	// Test completion handler
+	completionHandler := func(ctx context.Context, request mcp.CompleteRequest) (*mcp.CompleteResult, error) {
+		// Basic completion that returns some test values
+		return &mcp.CompleteResult{
+			Completion: struct {
+				Values  []string `json:"values"`
+				Total   int      `json:"total,omitempty"`
+				HasMore bool     `json:"hasMore,omitempty"`
+			}{
+				Values:  []string{"completion1", "completion2", "completion3"},
+				Total:   3,
+				HasMore: false,
+			},
+		}, nil
+	}
+
+	server := NewMCPServer("test-server", "1.0.0", WithCompletion(completionHandler))
+
+	// Initialize the server
+	initResponse := server.HandleMessage(context.Background(), []byte(`{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"method": "initialize"
+	}`))
+
+	// Verify completion capability is present
+	resp, ok := initResponse.(mcp.JSONRPCResponse)
+	require.True(t, ok)
+	initResult, ok := resp.Result.(mcp.InitializeResult)
+	require.True(t, ok)
+	assert.NotNil(t, initResult.Capabilities.Completion)
+
+	// Test completion request
+	completeResponse := server.HandleMessage(context.Background(), []byte(`{
+		"jsonrpc": "2.0",
+		"id": 2,
+		"method": "completion/complete",
+		"params": {
+			"ref": {
+				"type": "ref/prompt",
+				"name": "test-prompt"
+			},
+			"argument": {
+				"name": "test-arg",
+				"value": "test-"
+			}
+		}
+	}`))
+
+	// Verify completion response
+	completeResp, ok := completeResponse.(mcp.JSONRPCResponse)
+	require.True(t, ok)
+	completeResult, ok := completeResp.Result.(mcp.CompleteResult)
+	require.True(t, ok)
+	
+	assert.Equal(t, []string{"completion1", "completion2", "completion3"}, completeResult.Completion.Values)
+	assert.Equal(t, 3, completeResult.Completion.Total)
+	assert.False(t, completeResult.Completion.HasMore)
+}
+
+func TestMCPServer_CompletionNotSupported(t *testing.T) {
+	// Server without completion capabilities
+	server := NewMCPServer("test-server", "1.0.0")
+
+	// Initialize the server
+	_ = server.HandleMessage(context.Background(), []byte(`{
+		"jsonrpc": "2.0",
+		"id": 1,
+		"method": "initialize"
+	}`))
+
+	// Test completion request should fail
+	completeResponse := server.HandleMessage(context.Background(), []byte(`{
+		"jsonrpc": "2.0",
+		"id": 2,
+		"method": "completion/complete",
+		"params": {
+			"ref": {
+				"type": "ref/prompt",
+				"name": "test-prompt"
+			},
+			"argument": {
+				"name": "test-arg",
+				"value": "test-"
+			}
+		}
+	}`))
+
+	// Verify error response
+	errorResp, ok := completeResponse.(mcp.JSONRPCError)
+	require.True(t, ok)
+	assert.Equal(t, mcp.METHOD_NOT_FOUND, errorResp.Error.Code)
 }
