@@ -40,6 +40,9 @@ type PromptHandlerFunc func(ctx context.Context, request mcp.GetPromptRequest) (
 // ToolHandlerFunc handles tool calls with given arguments.
 type ToolHandlerFunc func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error)
 
+// CompletionHandlerFunc handles completion requests.
+type CompletionHandlerFunc func(ctx context.Context, request mcp.CompleteRequest) (*mcp.CompleteResult, error)
+
 // ToolHandlerMiddleware is a middleware function that wraps a ToolHandlerFunc.
 type ToolHandlerMiddleware func(ToolHandlerFunc) ToolHandlerFunc
 
@@ -143,6 +146,7 @@ type MCPServer struct {
 	tools                  map[string]ServerTool
 	toolHandlerMiddlewares []ToolHandlerMiddleware
 	toolFilters            []ToolFilterFunc
+	completionHandler      CompletionHandlerFunc
 	notificationHandlers   map[string]NotificationHandlerFunc
 	capabilities           serverCapabilities
 	paginationLimit        *int
@@ -159,10 +163,11 @@ func WithPaginationLimit(limit int) ServerOption {
 
 // serverCapabilities defines the supported features of the MCP server
 type serverCapabilities struct {
-	tools     *toolCapabilities
-	resources *resourceCapabilities
-	prompts   *promptCapabilities
-	logging   *bool
+	tools      *toolCapabilities
+	resources  *resourceCapabilities
+	prompts    *promptCapabilities
+	completion *completionCapabilities
+	logging    *bool
 }
 
 // resourceCapabilities defines the supported resource-related features
@@ -179,6 +184,10 @@ type promptCapabilities struct {
 // toolCapabilities defines the supported tool-related features
 type toolCapabilities struct {
 	listChanged bool
+}
+
+// completionCapabilities defines the supported completion-related features
+type completionCapabilities struct {
 }
 
 // WithResourceCapabilities configures resource-related server capabilities
@@ -266,6 +275,14 @@ func WithToolCapabilities(listChanged bool) ServerOption {
 func WithLogging() ServerOption {
 	return func(s *MCPServer) {
 		s.capabilities.logging = mcp.ToBoolPtr(true)
+	}
+}
+
+// WithCompletion enables completion capabilities for the server
+func WithCompletion(handler CompletionHandlerFunc) ServerOption {
+	return func(s *MCPServer) {
+		s.capabilities.completion = &completionCapabilities{}
+		s.completionHandler = handler
 	}
 }
 
@@ -548,6 +565,10 @@ func (s *MCPServer) handleInitialize(
 
 	if s.capabilities.logging != nil && *s.capabilities.logging {
 		capabilities.Logging = &struct{}{}
+	}
+
+	if s.capabilities.completion != nil {
+		capabilities.Completion = &struct{}{}
 	}
 
 	result := mcp.InitializeResult{
@@ -1014,6 +1035,31 @@ func (s *MCPServer) handleToolCall(
 	}
 
 	result, err := finalHandler(ctx, request)
+	if err != nil {
+		return nil, &requestError{
+			id:   id,
+			code: mcp.INTERNAL_ERROR,
+			err:  err,
+		}
+	}
+
+	return result, nil
+}
+
+func (s *MCPServer) handleComplete(
+	ctx context.Context,
+	id any,
+	request mcp.CompleteRequest,
+) (*mcp.CompleteResult, *requestError) {
+	if s.completionHandler == nil {
+		return nil, &requestError{
+			id:   id,
+			code: mcp.METHOD_NOT_FOUND,
+			err:  fmt.Errorf("completion handler not configured"),
+		}
+	}
+
+	result, err := s.completionHandler(ctx, request)
 	if err != nil {
 		return nil, &requestError{
 			id:   id,
