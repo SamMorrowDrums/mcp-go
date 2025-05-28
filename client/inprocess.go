@@ -1,8 +1,8 @@
 package client
 
 import (
-	"github.com/mark3labs/mcp-go/client/transport"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/sammorrowdrums/mcp-go/client/transport"
+	"github.com/sammorrowdrums/mcp-go/server"
 )
 
 // NewInProcessClient connect directly to a mcp server object in the same process

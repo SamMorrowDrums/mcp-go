@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/sammorrowdrums/mcp-go/mcp"
 )
 
 // Stdio implements the transport layer of the MCP protocol using stdio communication.

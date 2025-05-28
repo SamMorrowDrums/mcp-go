@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/sammorrowdrums/mcp-go/mcp"
+	"github.com/sammorrowdrums/mcp-go/server"
 )
 
 // Define a struct for our typed arguments
