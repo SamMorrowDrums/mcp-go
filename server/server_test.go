@@ -2041,6 +2041,19 @@ func TestMCPServer_ProtocolNegotiation(t *testing.T) {
 func TestMCPServer_CompletionHandling(t *testing.T) {
 	// Test completion handler
 	completionHandler := func(ctx context.Context, request mcp.CompleteRequest) (*mcp.CompleteResult, error) {
+		// Validate the resolved field is passed and correct
+		expected := map[string]string{"{user_id}": "123", "{repo}": "mcp-go"}
+		if request.Params.Resolved == nil {
+			return nil, fmt.Errorf("resolved field is nil")
+		}
+		if len(request.Params.Resolved) != len(expected) {
+			return nil, fmt.Errorf("resolved field has wrong length: got %d, want %d", len(request.Params.Resolved), len(expected))
+		}
+		for k, v := range expected {
+			if request.Params.Resolved[k] != v {
+				return nil, fmt.Errorf("resolved[%q] = %q, want %q", k, request.Params.Resolved[k], v)
+			}
+		}
 		// Basic completion that returns some test values
 		return &mcp.CompleteResult{
 			Completion: struct {
@@ -2094,7 +2107,7 @@ func TestMCPServer_CompletionHandling(t *testing.T) {
 	require.True(t, ok)
 	completeResult, ok := completeResp.Result.(mcp.CompleteResult)
 	require.True(t, ok)
-	
+
 	assert.Equal(t, []string{"completion1", "completion2", "completion3"}, completeResult.Completion.Values)
 	assert.Equal(t, 3, completeResult.Completion.Total)
 	assert.False(t, completeResult.Completion.HasMore)
