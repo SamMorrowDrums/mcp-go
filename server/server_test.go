@@ -59,6 +59,7 @@ func TestMCPServer_Capabilities(t *testing.T) {
 				WithPromptCapabilities(true),
 				WithToolCapabilities(true),
 				WithCompletion(func(ctx context.Context, request mcp.CompleteRequest) (*mcp.CompleteResult, error) {
+					// Optionally check request.Params.Resolved here
 					return &mcp.CompleteResult{
 						Completion: struct {
 							Values  []string `json:"values"`
@@ -487,13 +488,13 @@ func TestMCPServer_HandlePagination(t *testing.T) {
 		{
 			name: "List resources with cursor",
 			message: fmt.Sprintf(`{
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "resources/list",
-                    "params": {
-                        "cursor": "%s"
-                    }
-                }`, cursor),
+					"jsonrpc": "2.0",
+					"id": 1,
+					"method": "resources/list",
+					"params": {
+						"cursor": "%s"
+					}
+				}`, cursor),
 			validate: func(t *testing.T, response mcp.JSONRPCMessage) {
 				resp, ok := response.(mcp.JSONRPCResponse)
 				assert.True(t, ok)
@@ -529,9 +530,9 @@ func TestMCPServer_HandleNotifications(t *testing.T) {
 	)
 
 	message := `{
-            "jsonrpc": "2.0",
-            "method": "notifications/initialized"
-        }`
+			"jsonrpc": "2.0",
+			"method": "notifications/initialized"
+		}`
 
 	response := server.HandleMessage(context.Background(), []byte(message))
 	assert.Nil(t, response)
@@ -743,10 +744,10 @@ func TestMCPServer_PromptHandling(t *testing.T) {
 		{
 			name: "List prompts",
 			message: `{
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "prompts/list"
-            }`,
+				"jsonrpc": "2.0",
+				"id": 1,
+				"method": "prompts/list"
+			}`,
 			validate: func(t *testing.T, response mcp.JSONRPCMessage) {
 				resp, ok := response.(mcp.JSONRPCResponse)
 				assert.True(t, ok)
@@ -761,16 +762,16 @@ func TestMCPServer_PromptHandling(t *testing.T) {
 		{
 			name: "Get prompt",
 			message: `{
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "prompts/get",
-                "params": {
-                    "name": "test-prompt",
-                    "arguments": {
-                        "arg1": "test-value"
-                    }
-                }
-            }`,
+				"jsonrpc": "2.0",
+				"id": 1,
+				"method": "prompts/get",
+				"params": {
+					"name": "test-prompt",
+					"arguments": {
+						"arg1": "test-value"
+					}
+				}
+			}`,
 			validate: func(t *testing.T, response mcp.JSONRPCMessage) {
 				resp, ok := response.(mcp.JSONRPCResponse)
 				assert.True(t, ok)
@@ -790,14 +791,14 @@ func TestMCPServer_PromptHandling(t *testing.T) {
 		{
 			name: "Get prompt with missing argument",
 			message: `{
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "prompts/get",
-                "params": {
-                    "name": "test-prompt",
-                    "arguments": {}
-                }
-            }`,
+				"jsonrpc": "2.0",
+				"id": 1,
+				"method": "prompts/get",
+				"params": {
+					"name": "test-prompt",
+					"arguments": {}
+				}
+			}`,
 			validate: func(t *testing.T, response mcp.JSONRPCMessage) {
 				resp, ok := response.(mcp.JSONRPCResponse)
 				assert.True(t, ok)
@@ -1148,14 +1149,14 @@ func TestMCPServer_HandleUndefinedHandlers(t *testing.T) {
 		{
 			name: "Undefined tool",
 			message: `{
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "undefined-tool",
-                        "arguments": {}
-                    }
-                }`,
+					"jsonrpc": "2.0",
+					"id": 1,
+					"method": "tools/call",
+					"params": {
+						"name": "undefined-tool",
+						"arguments": {}
+					}
+				}`,
 			expectedErr: mcp.INVALID_PARAMS,
 			validateCallbacks: func(t *testing.T, err error, beforeResults beforeResult) {
 				assert.Equal(t, mcp.MethodToolsCall, beforeResults.method)
@@ -1165,14 +1166,14 @@ func TestMCPServer_HandleUndefinedHandlers(t *testing.T) {
 		{
 			name: "Undefined prompt",
 			message: `{
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "prompts/get",
-                    "params": {
-                        "name": "undefined-prompt",
-                        "arguments": {}
-                    }
-                }`,
+					"jsonrpc": "2.0",
+					"id": 1,
+					"method": "prompts/get",
+					"params": {
+						"name": "undefined-prompt",
+						"arguments": {}
+					}
+				}`,
 			expectedErr: mcp.INVALID_PARAMS,
 			validateCallbacks: func(t *testing.T, err error, beforeResults beforeResult) {
 				assert.Equal(t, mcp.MethodPromptsGet, beforeResults.method)
@@ -1182,13 +1183,13 @@ func TestMCPServer_HandleUndefinedHandlers(t *testing.T) {
 		{
 			name: "Undefined resource",
 			message: `{
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "resources/read",
-                    "params": {
-                        "uri": "undefined-resource"
-                    }
-                }`,
+					"jsonrpc": "2.0",
+					"id": 1,
+					"method": "resources/read",
+					"params": {
+						"uri": "undefined-resource"
+					}
+				}`,
 			expectedErr: mcp.RESOURCE_NOT_FOUND,
 			validateCallbacks: func(t *testing.T, err error, beforeResults beforeResult) {
 				assert.Equal(t, mcp.MethodResourcesRead, beforeResults.method)
@@ -1246,13 +1247,13 @@ func TestMCPServer_HandleMethodsWithoutCapabilities(t *testing.T) {
 		{
 			name: "Tools without capabilities",
 			message: `{
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "test-tool"
-                    }
-                }`,
+					"jsonrpc": "2.0",
+					"id": 1,
+					"method": "tools/call",
+					"params": {
+						"name": "test-tool"
+					}
+				}`,
 			options:     []ServerOption{hooksOption}, // No capabilities at all
 			expectedErr: mcp.METHOD_NOT_FOUND,
 			errString:   "tools",
@@ -1260,13 +1261,13 @@ func TestMCPServer_HandleMethodsWithoutCapabilities(t *testing.T) {
 		{
 			name: "Prompts without capabilities",
 			message: `{
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "prompts/get",
-                    "params": {
-                        "name": "test-prompt"
-                    }
-                }`,
+					"jsonrpc": "2.0",
+					"id": 1,
+					"method": "prompts/get",
+					"params": {
+						"name": "test-prompt"
+					}
+				}`,
 			options:     []ServerOption{hooksOption}, // No capabilities at all
 			expectedErr: mcp.METHOD_NOT_FOUND,
 			errString:   "prompts",
@@ -1274,13 +1275,13 @@ func TestMCPServer_HandleMethodsWithoutCapabilities(t *testing.T) {
 		{
 			name: "Resources without capabilities",
 			message: `{
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "resources/read",
-                    "params": {
-                        "uri": "test-resource"
-                    }
-                }`,
+					"jsonrpc": "2.0",
+					"id": 1,
+					"method": "resources/read",
+					"params": {
+						"uri": "test-resource"
+					}
+				}`,
 			options:     []ServerOption{hooksOption}, // No capabilities at all
 			expectedErr: mcp.METHOD_NOT_FOUND,
 			errString:   "resources",
@@ -2083,7 +2084,8 @@ func TestMCPServer_CompletionHandling(t *testing.T) {
 			"argument": {
 				"name": "test-arg",
 				"value": "test-"
-			}
+			},
+			"resolved": {"{user_id}": "123", "{repo}": "mcp-go"}
 		}
 	}`))
 

@@ -135,6 +135,18 @@ func handleRequest(request JSONRPCRequest) JSONRPCResponse {
 	case "logging/setLevel":
 		response.Result = struct{}{}
 	case "completion/complete":
+		var params map[string]any
+		if err := json.Unmarshal(request.Params, &params); err == nil {
+			if resolved, ok := params["resolved"]; ok {
+				response.Result = map[string]any{
+					"completion": map[string]any{
+						"values":   []string{"test completion"},
+						"resolved": resolved,
+					},
+				}
+				break
+			}
+		}
 		response.Result = map[string]any{
 			"completion": map[string]any{
 				"values": []string{"test completion"},

@@ -270,6 +270,7 @@ func TestStdioMCPClient(t *testing.T) {
 		}
 		request.Params.Argument.Name = "test-arg"
 		request.Params.Argument.Value = "test-value"
+		request.Params.Resolved = map[string]string{"{user_id}": "123", "{repo}": "mcp-go"}
 
 		result, err := client.Complete(ctx, request)
 		if err != nil {

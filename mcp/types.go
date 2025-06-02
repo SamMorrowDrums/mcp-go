@@ -919,6 +919,7 @@ type ModelHint struct {
 /* Autocomplete */
 
 // CompleteRequest is a request from the client to the server, to ask for completion options.
+// Updated to support the "resolved" key for passing through resolved variables.
 type CompleteRequest struct {
 	Request
 	Params struct {
@@ -929,6 +930,9 @@ type CompleteRequest struct {
 			// The value of the argument to use for completion matching.
 			Value string `json:"value"`
 		} `json:"argument"`
+		// Previously-resolved variables in a URI template. The keys of the object
+		// are the template's variable expressions including surrounding braces.
+		Resolved map[string]string `json:"resolved,omitempty"`
 	} `json:"params"`
 }
 
